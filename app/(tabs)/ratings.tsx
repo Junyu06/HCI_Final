@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, ActivityIndicator, ScrollView, useColorScheme } from 'react-native';
+import { StyleSheet, View, ActivityIndicator, ScrollView, useColorScheme, TextInput, TouchableOpacity } from 'react-native';
 import { searchSchool, searchProfessorsAtSchoolId } from 'ratemyprofessor-api/index';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -19,6 +19,8 @@ export default function RatingsScreen() {
   const [professors, setProfessors] = useState<Professor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [hofstraId, setHofstraId] = useState<string>('');
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -26,34 +28,37 @@ export default function RatingsScreen() {
     fetchHofstraProfessors();
   }, []);
 
-  const fetchHofstraProfessors = async () => {
+  const fetchHofstraProfessors = async (query: string = '') => {
     try {
       setLoading(true);
       setError(null);
 
-      // Search for Hofstra University
-      const schools = await searchSchool('Hofstra University');
+      // Search for Hofstra University if we don't have the ID yet
+      let schoolId = hofstraId;
+      if (!schoolId) {
+        const schools = await searchSchool('Hofstra University');
 
-      if (!schools || schools.length === 0) {
-        setError('Hofstra University not found');
-        setLoading(false);
-        return;
+        if (!schools || schools.length === 0) {
+          setError('Hofstra University not found');
+          setLoading(false);
+          return;
+        }
+
+        schoolId = schools[0].node.id;
+        setHofstraId(schoolId);
       }
 
-      const hofstraId = schools[0].node.id;
-
-      // Search for professors at Hofstra (empty string gets all professors)
-      const results = await searchProfessorsAtSchoolId('', hofstraId);
+      // Search for professors at Hofstra
+      const results = await searchProfessorsAtSchoolId(query, schoolId);
 
       if (!results || results.length === 0) {
-        setError('No professors found');
+        setError(query ? 'No professors found matching your search' : 'No professors found');
         setLoading(false);
         return;
       }
 
-      // Get 5 random professors
-      const shuffled = results.sort(() => 0.5 - Math.random());
-      const selectedProfessors = shuffled.slice(0, 5);
+      // If no query, get 5 random professors, otherwise show all results
+      const selectedProfessors = query ? results : results.sort(() => 0.5 - Math.random()).slice(0, 5);
 
       // Map to our Professor interface
       const professorDetails = selectedProfessors.map((prof: any) => {
@@ -79,6 +84,15 @@ export default function RatingsScreen() {
     }
   };
 
+  const handleSearch = () => {
+    fetchHofstraProfessors(searchQuery);
+  };
+
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    fetchHofstraProfessors('');
+  };
+
   const getRatingColor = (rating: number) => {
     if (rating >= 4.0) return '#4CAF50'; // Green
     if (rating >= 3.0) return '#FFA726'; // Orange
@@ -88,84 +102,101 @@ export default function RatingsScreen() {
   const borderColor = isDark ? '#2C2C2E' : '#E5E5EA';
   const cardBg = isDark ? '#1C1C1E' : '#FFFFFF';
 
-  if (loading) {
-    return (
-      <ThemedView style={styles.container}>
-        <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <ThemedText style={styles.loadingText}>Loading professors...</ThemedText>
-        </View>
-      </ThemedView>
-    );
-  }
-
-  if (error) {
-    return (
-      <ThemedView style={styles.container}>
-        <View style={styles.centerContent}>
-          <ThemedText style={styles.errorText}>{error}</ThemedText>
-        </View>
-      </ThemedView>
-    );
-  }
-
   return (
     <ThemedView style={styles.container}>
       <View style={[styles.header, { borderBottomColor: borderColor }]}>
         <ThemedText style={styles.title}>Professor Ratings</ThemedText>
         <ThemedText style={styles.subtitle}>Hofstra University</ThemedText>
+
+        {/* Search Bar */}
+        <View style={[styles.searchContainer, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
+          <TextInput
+            style={[
+              styles.searchInput,
+              { color: isDark ? '#FFFFFF' : '#000000' }
+            ]}
+            placeholder="Search professors by name..."
+            placeholderTextColor={isDark ? '#8E8E93' : '#8E8E93'}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={handleSearch}
+            returnKeyType="search"
+          />
+          {searchQuery ? (
+            <TouchableOpacity onPress={handleClearSearch} style={styles.clearButton}>
+              <ThemedText style={styles.clearButtonText}>✕</ThemedText>
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
+            <ThemedText style={styles.searchButtonText}>Search</ThemedText>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView style={styles.scrollView}>
-        {professors.map((prof) => (
-          <View
-            key={prof.id}
-            style={[
-              styles.professorCard,
-              { backgroundColor: cardBg, borderColor: borderColor }
-            ]}
-          >
-            <View style={styles.cardHeader}>
-              <ThemedText style={styles.professorName}>
-                {prof.firstName} {prof.lastName}
-              </ThemedText>
-              <View
-                style={[
-                  styles.ratingBadge,
-                  { backgroundColor: getRatingColor(prof.avgRating) }
-                ]}
-              >
-                <ThemedText style={styles.ratingText}>
-                  {prof.avgRating.toFixed(1)}
+      {loading ? (
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <ThemedText style={styles.loadingText}>Loading professors...</ThemedText>
+        </View>
+      ) : error ? (
+        <View style={styles.centerContent}>
+          <ThemedText style={styles.errorText}>{error}</ThemedText>
+          <TouchableOpacity onPress={handleClearSearch} style={styles.retryButton}>
+            <ThemedText style={styles.retryButtonText}>Show Random Professors</ThemedText>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView style={styles.scrollView}>
+          {professors.map((prof) => (
+            <View
+              key={prof.id}
+              style={[
+                styles.professorCard,
+                { backgroundColor: cardBg, borderColor: borderColor }
+              ]}
+            >
+              <View style={styles.cardHeader}>
+                <ThemedText style={styles.professorName}>
+                  {prof.firstName} {prof.lastName}
                 </ThemedText>
+                <View
+                  style={[
+                    styles.ratingBadge,
+                    { backgroundColor: getRatingColor(prof.avgRating) }
+                  ]}
+                >
+                  <ThemedText style={styles.ratingText}>
+                    {prof.avgRating.toFixed(1)}
+                  </ThemedText>
+                </View>
+              </View>
+
+              <ThemedText style={styles.department}>{prof.department}</ThemedText>
+
+              <View style={styles.statsContainer}>
+                <View style={styles.statItem}>
+                  <ThemedText style={styles.statLabel}>Difficulty</ThemedText>
+                  <ThemedText style={styles.statValue}>
+                    {prof.avgDifficulty.toFixed(1)}/5
+                  </ThemedText>
+                </View>
+
+                <View style={styles.statItem}>
+                  <ThemedText style={styles.statLabel}>Would Take Again</ThemedText>
+                  <ThemedText style={styles.statValue}>
+                    {prof.wouldTakeAgainPercent.toFixed(0)}%
+                  </ThemedText>
+                </View>
+
+                <View style={styles.statItem}>
+                  <ThemedText style={styles.statLabel}>Ratings</ThemedText>
+                  <ThemedText style={styles.statValue}>{prof.numRatings}</ThemedText>
+                </View>
               </View>
             </View>
-
-            <ThemedText style={styles.department}>{prof.department}</ThemedText>
-
-            <View style={styles.statsContainer}>
-              <View style={styles.statItem}>
-                <ThemedText style={styles.statLabel}>Difficulty</ThemedText>
-                <ThemedText style={styles.statValue}>
-                  {prof.avgDifficulty.toFixed(1)}/5
-                </ThemedText>
-              </View>
-
-              <View style={styles.statItem}>
-                <ThemedText style={styles.statLabel}>Would Take Again</ThemedText>
-                <ThemedText style={styles.statValue}>
-                  {prof.wouldTakeAgainPercent.toFixed(0)}%
-                </ThemedText>
-              </View>
-
-              <View style={styles.statItem}>
-                <ThemedText style={styles.statLabel}>Ratings</ThemedText>
-                <ThemedText style={styles.statValue}>{prof.numRatings}</ThemedText>
-              </View>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+          ))}
+        </ScrollView>
+      )}
     </ThemedView>
   );
 }
@@ -187,7 +218,40 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     marginTop: 4,
+    marginBottom: 12,
     opacity: 0.7,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 4,
+  },
+  clearButton: {
+    padding: 4,
+    marginRight: 8,
+  },
+  clearButtonText: {
+    fontSize: 18,
+    opacity: 0.5,
+  },
+  searchButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  searchButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
@@ -205,6 +269,20 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 16,
     color: '#EF5350',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginTop: 12,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   professorCard: {
     padding: 16,
