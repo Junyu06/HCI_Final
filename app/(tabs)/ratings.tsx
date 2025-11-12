@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, ActivityIndicator, ScrollView, useColorScheme, TextInput, TouchableOpacity } from 'react-native';
-import { searchSchool, searchProfessorsAtSchoolId } from 'ratemyprofessor-api/index';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Colors } from '@/constants/theme';
+import { searchProfessorsAtSchoolId, searchSchool } from 'ratemyprofessor-api/index';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 
 interface Professor {
   id: string;
@@ -23,6 +24,7 @@ export default function RatingsScreen() {
   const [hofstraId, setHofstraId] = useState<string>('');
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const colors = isDark ? Colors.dark : Colors.light;
 
   useEffect(() => {
     fetchHofstraProfessors();
@@ -94,29 +96,26 @@ export default function RatingsScreen() {
   };
 
   const getRatingColor = (rating: number) => {
-    if (rating >= 4.0) return '#4CAF50'; // Green
-    if (rating >= 3.0) return '#FFA726'; // Orange
-    return '#EF5350'; // Red
+    if (rating >= 4.0) return colors.success;
+    if (rating >= 3.0) return colors.warning;
+    return colors.error;
   };
-
-  const borderColor = isDark ? '#2C2C2E' : '#E5E5EA';
-  const cardBg = isDark ? '#1C1C1E' : '#FFFFFF';
 
   return (
     <ThemedView style={styles.container}>
-      <View style={[styles.header, { borderBottomColor: borderColor }]}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <ThemedText style={styles.title}>Professor Ratings</ThemedText>
-        <ThemedText style={styles.subtitle}>Hofstra University</ThemedText>
+        <ThemedText style={[styles.subtitle, { color: colors.lightText }]}>Hofstra University</ThemedText>
 
         {/* Search Bar */}
-        <View style={[styles.searchContainer, { backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }]}>
+        <View style={[styles.searchContainer, { backgroundColor: colors.searchBackground }]}>
           <TextInput
             style={[
               styles.searchInput,
-              { color: isDark ? '#FFFFFF' : '#000000' }
+              { color: colors.text }
             ]}
             placeholder="Search professors by name..."
-            placeholderTextColor={isDark ? '#8E8E93' : '#8E8E93'}
+            placeholderTextColor={colors.placeholder}
             value={searchQuery}
             onChangeText={setSearchQuery}
             onSubmitEditing={handleSearch}
@@ -127,7 +126,7 @@ export default function RatingsScreen() {
               <ThemedText style={styles.clearButtonText}>✕</ThemedText>
             </TouchableOpacity>
           ) : null}
-          <TouchableOpacity onPress={handleSearch} style={styles.searchButton}>
+          <TouchableOpacity onPress={handleSearch} style={[styles.searchButton, { backgroundColor: colors.accent }]}>
             <ThemedText style={styles.searchButtonText}>Search</ThemedText>
           </TouchableOpacity>
         </View>
@@ -135,24 +134,24 @@ export default function RatingsScreen() {
 
       {loading ? (
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color="#007AFF" />
+          <ActivityIndicator size="large" color={colors.accent} />
           <ThemedText style={styles.loadingText}>Loading professors...</ThemedText>
         </View>
       ) : error ? (
         <View style={styles.centerContent}>
-          <ThemedText style={styles.errorText}>{error}</ThemedText>
-          <TouchableOpacity onPress={handleClearSearch} style={styles.retryButton}>
+          <ThemedText style={[styles.errorText, { color: colors.error }]}>{error}</ThemedText>
+          <TouchableOpacity onPress={handleClearSearch} style={[styles.retryButton, { backgroundColor: colors.accent }]}>
             <ThemedText style={styles.retryButtonText}>Show Random Professors</ThemedText>
           </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView style={styles.scrollView}>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {professors.map((prof) => (
             <View
               key={prof.id}
               style={[
                 styles.professorCard,
-                { backgroundColor: cardBg, borderColor: borderColor }
+                { backgroundColor: colors.cardBackground, borderColor: colors.border }
               ]}
             >
               <View style={styles.cardHeader}>
@@ -204,35 +203,37 @@ export default function RatingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: 60,
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 15,
+    paddingTop: 16,
+    paddingBottom: 16,
     borderBottomWidth: 1,
   },
   title: {
-    fontSize: 28,
+    paddingTop: 8,
+    fontSize: 32,
     fontWeight: 'bold',
+    marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
-    marginTop: 4,
-    marginBottom: 12,
+    fontSize: 15,
+    marginBottom: 16,
     opacity: 0.7,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     marginTop: 8,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    paddingVertical: 4,
+    paddingVertical: 6,
   },
   clearButton: {
     padding: 4,
@@ -243,15 +244,15 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   searchButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 10,
   },
   searchButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   scrollView: {
     flex: 1,
@@ -268,32 +269,36 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: '#EF5350',
     textAlign: 'center',
     marginBottom: 16,
   },
   retryButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 12,
     marginTop: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   retryButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   professorCard: {
-    padding: 16,
-    borderRadius: 12,
+    padding: 18,
+    borderRadius: 16,
     marginBottom: 16,
     borderWidth: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 4,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -302,19 +307,26 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   professorName: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     flex: 1,
+    letterSpacing: 0.3,
   },
   ratingBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   ratingText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
   department: {
     fontSize: 14,

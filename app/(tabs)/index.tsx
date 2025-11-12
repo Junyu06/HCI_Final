@@ -1,11 +1,14 @@
-import React from 'react';
-import { StyleSheet, View, useColorScheme, ScrollView, Text } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Colors } from '@/constants/theme';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const App = () => {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const colors = isDark ? Colors.dark : Colors.light;
 
   // Generate current week dates
   const getWeekDates = () => {
@@ -28,21 +31,20 @@ const App = () => {
   const weekDates = getWeekDates();
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-  const borderColor = isDark ? '#2C2C2E' : '#E5E5EA';
-  const textColor = isDark ? '#FFFFFF' : '#000000';
-  const lightTextColor = isDark ? '#8E8E93' : '#6B7280';
-  const backgroundColor = isDark ? '#1C1C1E' : '#FFFFFF';
-  const cellBackgroundColor = isDark ? '#1C1C1E' : '#F9FAFB';
-
   return (
     <ThemedView style={styles.container}>
-      <View style={[styles.header, { borderBottomColor: borderColor }]}>
-        <ThemedText style={styles.title}>Weekly Schedule</ThemedText>
-      </View>
+      <SafeAreaView edges={['top']} style={{ backgroundColor: colors.background }}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <ThemedText style={styles.title}>Weekly Schedule</ThemedText>
+          <ThemedText style={[styles.subtitle, { color: colors.lightText }]}>
+            {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          </ThemedText>
+        </View>
+      </SafeAreaView>
 
-      <ScrollView style={styles.scheduleContainer}>
+      <ScrollView style={styles.scheduleContainer} showsVerticalScrollIndicator={false}>
         {/* Week header with dates */}
-        <View style={[styles.weekHeader, { borderBottomColor: borderColor, backgroundColor }]}>
+        <View style={[styles.weekHeader, { borderBottomColor: colors.border, backgroundColor: colors.background }]}>
           <View style={styles.timeColumn} />
           {weekDates.map((date, index) => {
             const isToday = date.toDateString() === new Date().toDateString();
@@ -50,17 +52,17 @@ const App = () => {
               <View key={index} style={styles.dayHeader}>
                 <Text style={[
                   styles.dayName,
-                  { color: isToday ? '#007AFF' : lightTextColor }
+                  { color: isToday ? colors.accent : colors.lightText }
                 ]}>
                   {dayNames[index]}
                 </Text>
                 <View style={[
                   styles.dateCircle,
-                  isToday && styles.todayCircle
+                  isToday && { backgroundColor: colors.accent }
                 ]}>
                   <Text style={[
                     styles.dateNumber,
-                    { color: isToday ? '#FFFFFF' : textColor }
+                    { color: isToday ? '#FFFFFF' : colors.text }
                   ]}>
                     {date.getDate()}
                   </Text>
@@ -71,12 +73,12 @@ const App = () => {
         </View>
 
         {/* Hourly grid */}
-        <ScrollView style={styles.gridContainer}>
+        <ScrollView style={styles.gridContainer} showsVerticalScrollIndicator={false}>
           {hours.map((hour) => (
-            <View key={hour} style={[styles.hourRow, { borderBottomColor: borderColor }]}>
+            <View key={hour} style={[styles.hourRow, { borderBottomColor: colors.border }]}>
               {/* Time label */}
               <View style={styles.timeColumn}>
-                <Text style={[styles.timeText, { color: lightTextColor }]}>
+                <Text style={[styles.timeText, { color: colors.lightText }]}>
                   {hour > 12 ? `${hour - 12} PM` : hour === 12 ? '12 PM' : `${hour} AM`}
                 </Text>
               </View>
@@ -88,9 +90,9 @@ const App = () => {
                   style={[
                     styles.dayCell,
                     {
-                      backgroundColor: cellBackgroundColor,
-                      borderRightColor: borderColor,
-                      borderBottomColor: borderColor
+                      backgroundColor: colors.cellBackground,
+                      borderRightColor: colors.border,
+                      borderBottomColor: colors.border
                     }
                   ]}
                 />
@@ -106,16 +108,23 @@ const App = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: 0,
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 15,
+    paddingTop: 16,
+    paddingBottom: 16,
     borderBottomWidth: 1,
   },
   title: {
-    fontSize: 28,
+    paddingTop: 8,
+    fontSize: 32,
     fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 15,
+    opacity: 0.7,
   },
   scheduleContainer: {
     flex: 1,
@@ -123,7 +132,12 @@ const styles = StyleSheet.create({
   weekHeader: {
     flexDirection: 'row',
     borderBottomWidth: 2,
-    paddingVertical: 12,
+    paddingVertical: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
   },
   timeColumn: {
     width: 60,
@@ -136,22 +150,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dayName: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 4,
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 6,
+    letterSpacing: 0.5,
   },
   dateCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  todayCircle: {
-    backgroundColor: '#007AFF',
-  },
   dateNumber: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
   },
   gridContainer: {
@@ -159,12 +171,13 @@ const styles = StyleSheet.create({
   },
   hourRow: {
     flexDirection: 'row',
-    height: 60,
+    height: 70,
     borderBottomWidth: 1,
   },
   timeText: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   dayCell: {
     flex: 1,
