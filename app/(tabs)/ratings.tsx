@@ -1,0 +1,264 @@
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, View, ActivityIndicator, ScrollView, useColorScheme } from 'react-native';
+import { searchSchool, searchProfessorsAtSchoolId } from 'ratemyprofessor-api/index';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+
+interface Professor {
+  id: string;
+  firstName: string;
+  lastName: string;
+  department: string;
+  avgRating: number;
+  avgDifficulty: number;
+  numRatings: number;
+  wouldTakeAgainPercent: number;
+}
+
+export default function RatingsScreen() {
+  const [professors, setProfessors] = useState<Professor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+
+  useEffect(() => {
+    fetchHofstraProfessors();
+  }, []);
+
+  const fetchHofstraProfessors = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Search for Hofstra University
+      const schools = await searchSchool('Hofstra University');
+
+      if (!schools || schools.length === 0) {
+        setError('Hofstra University not found');
+        setLoading(false);
+        return;
+      }
+
+      const hofstraId = schools[0].node.id;
+
+      // Search for professors at Hofstra (empty string gets all professors)
+      const results = await searchProfessorsAtSchoolId('', hofstraId);
+
+      if (!results || results.length === 0) {
+        setError('No professors found');
+        setLoading(false);
+        return;
+      }
+
+      // Get 5 random professors
+      const shuffled = results.sort(() => 0.5 - Math.random());
+      const selectedProfessors = shuffled.slice(0, 5);
+
+      // Map to our Professor interface
+      const professorDetails = selectedProfessors.map((prof: any) => {
+        const node = prof.node;
+        return {
+          id: node.id || '',
+          firstName: node.firstName || '',
+          lastName: node.lastName || '',
+          department: node.department || 'N/A',
+          avgRating: node.avgRating || 0,
+          avgDifficulty: node.avgDifficulty || 0,
+          numRatings: node.numRatings || 0,
+          wouldTakeAgainPercent: node.wouldTakeAgainPercent || 0,
+        };
+      });
+
+      setProfessors(professorDetails);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching professors:', err);
+      setError('Failed to load professors');
+      setLoading(false);
+    }
+  };
+
+  const getRatingColor = (rating: number) => {
+    if (rating >= 4.0) return '#4CAF50'; // Green
+    if (rating >= 3.0) return '#FFA726'; // Orange
+    return '#EF5350'; // Red
+  };
+
+  const borderColor = isDark ? '#2C2C2E' : '#E5E5EA';
+  const cardBg = isDark ? '#1C1C1E' : '#FFFFFF';
+
+  if (loading) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <ThemedText style={styles.loadingText}>Loading professors...</ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
+
+  if (error) {
+    return (
+      <ThemedView style={styles.container}>
+        <View style={styles.centerContent}>
+          <ThemedText style={styles.errorText}>{error}</ThemedText>
+        </View>
+      </ThemedView>
+    );
+  }
+
+  return (
+    <ThemedView style={styles.container}>
+      <View style={[styles.header, { borderBottomColor: borderColor }]}>
+        <ThemedText style={styles.title}>Professor Ratings</ThemedText>
+        <ThemedText style={styles.subtitle}>Hofstra University</ThemedText>
+      </View>
+
+      <ScrollView style={styles.scrollView}>
+        {professors.map((prof) => (
+          <View
+            key={prof.id}
+            style={[
+              styles.professorCard,
+              { backgroundColor: cardBg, borderColor: borderColor }
+            ]}
+          >
+            <View style={styles.cardHeader}>
+              <ThemedText style={styles.professorName}>
+                {prof.firstName} {prof.lastName}
+              </ThemedText>
+              <View
+                style={[
+                  styles.ratingBadge,
+                  { backgroundColor: getRatingColor(prof.avgRating) }
+                ]}
+              >
+                <ThemedText style={styles.ratingText}>
+                  {prof.avgRating.toFixed(1)}
+                </ThemedText>
+              </View>
+            </View>
+
+            <ThemedText style={styles.department}>{prof.department}</ThemedText>
+
+            <View style={styles.statsContainer}>
+              <View style={styles.statItem}>
+                <ThemedText style={styles.statLabel}>Difficulty</ThemedText>
+                <ThemedText style={styles.statValue}>
+                  {prof.avgDifficulty.toFixed(1)}/5
+                </ThemedText>
+              </View>
+
+              <View style={styles.statItem}>
+                <ThemedText style={styles.statLabel}>Would Take Again</ThemedText>
+                <ThemedText style={styles.statValue}>
+                  {prof.wouldTakeAgainPercent.toFixed(0)}%
+                </ThemedText>
+              </View>
+
+              <View style={styles.statItem}>
+                <ThemedText style={styles.statLabel}>Ratings</ThemedText>
+                <ThemedText style={styles.statValue}>{prof.numRatings}</ThemedText>
+              </View>
+            </View>
+          </View>
+        ))}
+      </ScrollView>
+    </ThemedView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  subtitle: {
+    fontSize: 16,
+    marginTop: 4,
+    opacity: 0.7,
+  },
+  scrollView: {
+    flex: 1,
+    padding: 16,
+  },
+  centerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#EF5350',
+  },
+  professorCard: {
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  professorName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    flex: 1,
+  },
+  ratingBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  ratingText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  department: {
+    fontSize: 14,
+    marginBottom: 12,
+    opacity: 0.7,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statLabel: {
+    fontSize: 12,
+    opacity: 0.6,
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
