@@ -3,6 +3,7 @@ import engScheduleJson from '@/engineering_schedule_spring_2026.json';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
+import { useSchedule } from '@/contexts/ScheduleContext';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -48,6 +49,7 @@ type SortOption = 'courseCode' | 'title' | 'instructor' | 'credits' | 'remaining
 type SortOrder = 'asc' | 'desc';
 
 export default function CoursesScreen() {
+  const { scheduledCourses, addCourse } = useSchedule();
   const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [displayCount, setDisplayCount] = useState(10);
   const [loading, setLoading] = useState(true);
@@ -367,31 +369,51 @@ export default function CoursesScreen() {
             }
             return null;
           }}
-          renderItem={({ item: course }) => (
-            <View
-              style={[
-                styles.courseCard,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border },
-              ]}
-            >
-              <View style={styles.cardHeader}>
-                <View style={{ flex: 1 }}>
-                  <View style={styles.courseCodeRow}>
-                    <ThemedText style={styles.courseCode}>
-                      {course.subject} {course.course}-{course.section}
-                    </ThemedText>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        { backgroundColor: getStatusColor(course.status) },
-                      ]}
-                    >
-                      <ThemedText style={styles.statusText}>{course.status}</ThemedText>
+          renderItem={({ item: course }) => {
+            const isAdded = scheduledCourses.some(c => c.crn === course.crn);
+
+            return (
+              <View
+                style={[
+                  styles.courseCard,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border },
+                ]}
+              >
+                <View style={styles.cardHeader}>
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.courseCodeRow}>
+                      <ThemedText style={styles.courseCode}>
+                        {course.subject} {course.course}-{course.section}
+                      </ThemedText>
+                      <View style={styles.headerActions}>
+                        <View
+                          style={[
+                            styles.statusBadge,
+                            { backgroundColor: getStatusColor(course.status) },
+                          ]}
+                        >
+                          <ThemedText style={styles.statusText}>{course.status}</ThemedText>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => !isAdded && addCourse(course)}
+                          style={[
+                            styles.addButton,
+                            {
+                              backgroundColor: isAdded ? colors.border : colors.accent,
+                              opacity: isAdded ? 0.5 : 1,
+                            },
+                          ]}
+                          disabled={isAdded}
+                        >
+                          <ThemedText style={styles.addButtonText}>
+                            {isAdded ? '✓' : '+'}
+                          </ThemedText>
+                        </TouchableOpacity>
+                      </View>
                     </View>
+                    <ThemedText style={styles.courseTitle}>{course.title}</ThemedText>
                   </View>
-                  <ThemedText style={styles.courseTitle}>{course.title}</ThemedText>
                 </View>
-              </View>
 
               <View style={styles.infoSection}>
                 <View style={styles.infoRow}>
@@ -458,7 +480,8 @@ export default function CoursesScreen() {
                 )}
               </View>
             </View>
-          )}
+            );
+          }}
         />
       )}
     </ThemedView>
@@ -641,6 +664,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 2,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 4,
@@ -649,6 +677,18 @@ const styles = StyleSheet.create({
   statusText: {
     color: '#FFFFFF',
     fontSize: 12,
+    fontWeight: 'bold',
+  },
+  addButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addButtonText: {
+    color: '#FFFFFF',
+    fontSize: 20,
     fontWeight: 'bold',
   },
   infoSection: {
