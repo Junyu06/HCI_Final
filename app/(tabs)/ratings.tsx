@@ -4,6 +4,7 @@ import { Colors } from '@/constants/theme';
 import { searchProfessorsAtSchoolId, searchSchool } from 'ratemyprofessor-api/index';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { useRouter } from 'expo-router';
 
 interface Professor {
   id: string;
@@ -20,6 +21,7 @@ type SortOption = 'rating' | 'wouldTakeAgain' | 'difficulty';
 type SortOrder = 'asc' | 'desc';
 
 export default function RatingsScreen() {
+  const router = useRouter();
   const [allProfessors, setAllProfessors] = useState<Professor[]>([]);
   const [displayCount, setDisplayCount] = useState(10);
   const [loading, setLoading] = useState(true);
@@ -299,51 +301,68 @@ export default function RatingsScreen() {
             return null;
           }}
           renderItem={({ item: prof }) => (
-            <View
-              style={[
-                styles.professorCard,
-                { backgroundColor: colors.cardBackground, borderColor: colors.border }
-              ]}
+            <TouchableOpacity
+              onPress={() => router.push({
+                pathname: '/professor/[id]',
+                params: {
+                  id: prof.id,
+                  firstName: prof.firstName,
+                  lastName: prof.lastName,
+                  department: prof.department,
+                  avgRating: prof.avgRating,
+                  avgDifficulty: prof.avgDifficulty,
+                  numRatings: prof.numRatings,
+                  wouldTakeAgainPercent: prof.wouldTakeAgainPercent,
+                }
+              })}
+              activeOpacity={0.7}
             >
-              <View style={styles.cardHeader}>
-                <ThemedText style={styles.professorName}>
-                  {prof.firstName} {prof.lastName}
-                </ThemedText>
-                <View
-                  style={[
-                    styles.ratingBadge,
-                    { backgroundColor: getRatingColor(prof.avgRating) }
-                  ]}
-                >
-                  <ThemedText style={styles.ratingText}>
-                    {prof.avgRating.toFixed(1)}
+              <View
+                style={[
+                  styles.professorCard,
+                  { backgroundColor: colors.cardBackground, borderColor: colors.border }
+                ]}
+              >
+                <View style={styles.cardHeader}>
+                  <ThemedText style={styles.professorName}>
+                    {prof.firstName} {prof.lastName}
                   </ThemedText>
+                  <View
+                    style={[
+                      styles.ratingBadge,
+                      { backgroundColor: getRatingColor(prof.avgRating) }
+                    ]}
+                  >
+                    <ThemedText style={styles.ratingText}>
+                      {prof.avgRating.toFixed(1)}
+                    </ThemedText>
+                  </View>
+                </View>
+
+                <ThemedText style={styles.department}>{prof.department}</ThemedText>
+
+                <View style={styles.statsContainer}>
+                  <View style={styles.statItem}>
+                    <ThemedText style={styles.statLabel}>Difficulty</ThemedText>
+                    <ThemedText style={styles.statValue}>
+                      {prof.avgDifficulty.toFixed(1)}/5
+                    </ThemedText>
+                  </View>
+
+                  <View style={styles.statItem}>
+                    <ThemedText style={styles.statLabel}>Would Take Again</ThemedText>
+                    <ThemedText style={styles.statValue}>
+                      {prof.wouldTakeAgainPercent.toFixed(0)}%
+                    </ThemedText>
+                  </View>
+
+                  <View style={styles.statItem}>
+                    <ThemedText style={styles.statLabel}>Ratings</ThemedText>
+                    <ThemedText style={styles.statValue}>{prof.numRatings}</ThemedText>
+                  </View>
                 </View>
               </View>
-
-              <ThemedText style={styles.department}>{prof.department}</ThemedText>
-
-              <View style={styles.statsContainer}>
-                <View style={styles.statItem}>
-                  <ThemedText style={styles.statLabel}>Difficulty</ThemedText>
-                  <ThemedText style={styles.statValue}>
-                    {prof.avgDifficulty.toFixed(1)}/5
-                  </ThemedText>
-                </View>
-
-                <View style={styles.statItem}>
-                  <ThemedText style={styles.statLabel}>Would Take Again</ThemedText>
-                  <ThemedText style={styles.statValue}>
-                    {prof.wouldTakeAgainPercent.toFixed(0)}%
-                  </ThemedText>
-                </View>
-
-                <View style={styles.statItem}>
-                  <ThemedText style={styles.statLabel}>Ratings</ThemedText>
-                  <ThemedText style={styles.statValue}>{prof.numRatings}</ThemedText>
-                </View>
-              </View>
-            </View>
+            </TouchableOpacity>
           )}
         />
       )}
