@@ -46,6 +46,9 @@ export default function ProfessorDetailsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [selectedClass, setSelectedClass] = useState<string>('All Classes');
   const [showClassDropdown, setShowClassDropdown] = useState(false);
+  const [sortBy, setSortBy] = useState<'rating' | 'difficulty' | 'date'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const colors = isDark ? Colors.dark : Colors.light;
@@ -178,6 +181,52 @@ export default function ProfessorDetailsScreen() {
     return rating.class === selectedClass;
   }) || [];
 
+  const sortRatings = (ratings: Rating[]) => {
+    const sorted = [...ratings].sort((a, b) => {
+      let compareValue = 0;
+
+      switch (sortBy) {
+        case 'rating':
+          compareValue = a.rating - b.rating;
+          break;
+        case 'difficulty':
+          compareValue = a.difficulty - b.difficulty;
+          break;
+        case 'date':
+          const dateA = new Date(a.date).getTime();
+          const dateB = new Date(b.date).getTime();
+          compareValue = dateA - dateB;
+          break;
+      }
+
+      return sortOrder === 'asc' ? compareValue : -compareValue;
+    });
+
+    return sorted;
+  };
+
+  const sortedRatings = sortRatings(filteredRatings);
+
+  const handleSortSelect = (option: 'rating' | 'difficulty' | 'date') => {
+    setSortBy(option);
+    setShowSortDropdown(false);
+  };
+
+  const toggleSortOrder = () => {
+    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+  };
+
+  const getSortLabel = (option: 'rating' | 'difficulty' | 'date') => {
+    switch (option) {
+      case 'rating':
+        return 'Rating';
+      case 'difficulty':
+        return 'Difficulty';
+      case 'date':
+        return 'Date';
+    }
+  };
+
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
 
@@ -259,50 +308,95 @@ export default function ProfessorDetailsScreen() {
             </View>
           </View>
 
-          {/* Class Filter */}
+          {/* Filters */}
           <View style={styles.filterSection}>
             <ThemedText style={styles.filterTitle}>Student Ratings</ThemedText>
-            <View style={{ position: 'relative', zIndex: 1000 }}>
-              <TouchableOpacity
-                onPress={() => setShowClassDropdown(!showClassDropdown)}
-                style={[styles.classDropdownButton, { backgroundColor: colors.searchBackground, borderColor: colors.border }]}
-              >
-                <ThemedText style={styles.classDropdownLabel}>{selectedClass}</ThemedText>
-                <ThemedText style={styles.dropdownArrow}>{showClassDropdown ? '▲' : '▼'}</ThemedText>
-              </TouchableOpacity>
+            <View style={styles.filtersRow}>
+              {/* Class Filter Dropdown */}
+              <View style={styles.filterItem}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowClassDropdown(!showClassDropdown);
+                    setShowSortDropdown(false);
+                  }}
+                  style={[styles.filterButton, { backgroundColor: colors.searchBackground, borderColor: colors.border }]}
+                >
+                  <ThemedText style={styles.filterButtonLabel} numberOfLines={1}>{selectedClass}</ThemedText>
+                  <ThemedText style={styles.dropdownArrow}>{showClassDropdown ? '▲' : '▼'}</ThemedText>
+                </TouchableOpacity>
 
-              {showClassDropdown && (
-                <View style={[styles.classDropdownMenu, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                  <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
-                    {getUniqueClasses().map((className) => (
+                {showClassDropdown && (
+                  <View style={[styles.dropdownMenu, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                    <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
+                      {getUniqueClasses().map((className) => (
+                        <TouchableOpacity
+                          key={className}
+                          onPress={() => {
+                            setSelectedClass(className);
+                            setShowClassDropdown(false);
+                          }}
+                          style={[
+                            styles.dropdownItem,
+                            selectedClass === className && { backgroundColor: colors.searchBackground },
+                          ]}
+                        >
+                          <ThemedText style={styles.dropdownItemText}>{className}</ThemedText>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+
+              {/* Sort Dropdown */}
+              <View style={styles.filterItem}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowSortDropdown(!showSortDropdown);
+                    setShowClassDropdown(false);
+                  }}
+                  style={[styles.filterButton, { backgroundColor: colors.searchBackground, borderColor: colors.border }]}
+                >
+                  <ThemedText style={styles.filterButtonLabel}>{getSortLabel(sortBy)}</ThemedText>
+                  <ThemedText style={styles.dropdownArrow}>{showSortDropdown ? '▲' : '▼'}</ThemedText>
+                </TouchableOpacity>
+
+                {showSortDropdown && (
+                  <View style={[styles.dropdownMenu, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                    {(['rating', 'difficulty', 'date'] as const).map((option) => (
                       <TouchableOpacity
-                        key={className}
-                        onPress={() => {
-                          setSelectedClass(className);
-                          setShowClassDropdown(false);
-                        }}
+                        key={option}
+                        onPress={() => handleSortSelect(option)}
                         style={[
-                          styles.classDropdownItem,
-                          selectedClass === className && { backgroundColor: colors.searchBackground },
+                          styles.dropdownItem,
+                          sortBy === option && { backgroundColor: colors.searchBackground },
                         ]}
                       >
-                        <ThemedText style={styles.classDropdownItemText}>{className}</ThemedText>
+                        <ThemedText style={styles.dropdownItemText}>{getSortLabel(option)}</ThemedText>
                       </TouchableOpacity>
                     ))}
-                  </ScrollView>
-                </View>
-              )}
+                  </View>
+                )}
+              </View>
+
+              {/* Sort Order Toggle */}
+              <TouchableOpacity
+                onPress={toggleSortOrder}
+                style={[styles.orderButton, { backgroundColor: colors.accent }]}
+              >
+                <ThemedText style={styles.orderButtonText}>{sortOrder === 'asc' ? '↑' : '↓'}</ThemedText>
+              </TouchableOpacity>
             </View>
           </View>
 
           {/* Ratings List */}
           <View style={styles.ratingsContainer}>
-            {filteredRatings.length === 0 ? (
+            {sortedRatings.length === 0 ? (
               <View style={styles.noRatingsContainer}>
                 <ThemedText style={styles.noRatingsText}>No ratings found for this class</ThemedText>
               </View>
             ) : (
-              filteredRatings.map((rating) => (
+              sortedRatings.map((rating) => (
                 <View
                   key={rating.id}
                   style={[styles.ratingCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
@@ -468,6 +562,68 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 12,
   },
+  filtersRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  filterItem: {
+    flex: 1,
+    position: 'relative',
+    zIndex: 1000,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  filterButtonLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+  },
+  dropdownArrow: {
+    fontSize: 12,
+    marginLeft: 4,
+    opacity: 0.6,
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 46,
+    left: 0,
+    right: 0,
+    borderRadius: 12,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    maxHeight: 200,
+  },
+  dropdownItem: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  dropdownItemText: {
+    fontSize: 14,
+  },
+  orderButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orderButtonText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
   classDropdownButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -480,11 +636,6 @@ const styles = StyleSheet.create({
   classDropdownLabel: {
     fontSize: 15,
     fontWeight: '500',
-  },
-  dropdownArrow: {
-    fontSize: 12,
-    marginLeft: 8,
-    opacity: 0.6,
   },
   classDropdownMenu: {
     position: 'absolute',
