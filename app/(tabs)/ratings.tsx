@@ -3,7 +3,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { searchProfessorsAtSchoolId, searchSchool } from 'ratemyprofessor-api/index';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, TextInput, TouchableOpacity, useColorScheme, View } from 'react-native';
 
 interface Professor {
   id: string;
@@ -16,12 +16,20 @@ interface Professor {
   wouldTakeAgainPercent: number;
 }
 
+type SortOption = 'rating' | 'wouldTakeAgain' | 'difficulty';
+type SortOrder = 'asc' | 'desc';
+
 export default function RatingsScreen() {
-  const [professors, setProfessors] = useState<Professor[]>([]);
+  const [allProfessors, setAllProfessors] = useState<Professor[]>([]);
+  const [displayCount, setDisplayCount] = useState(10);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [hofstraId, setHofstraId] = useState<string>('');
+  const [sortBy, setSortBy] = useState<SortOption>('rating');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const colors = isDark ? Colors.dark : Colors.light;
@@ -34,6 +42,7 @@ export default function RatingsScreen() {
     try {
       setLoading(true);
       setError(null);
+      setDisplayCount(10); // Reset display count when fetching new data
 
       // Search for Hofstra University if we don't have the ID yet
       let schoolId = hofstraId;
@@ -50,7 +59,7 @@ export default function RatingsScreen() {
         setHofstraId(schoolId);
       }
 
-      // Search for professors at Hofstra
+      // Search for professors at Hofstra - fetch all results
       const results = await searchProfessorsAtSchoolId(query, schoolId);
 
       if (!results || results.length === 0) {
@@ -59,11 +68,8 @@ export default function RatingsScreen() {
         return;
       }
 
-      // If no query, get 5 random professors, otherwise show all results
-      const selectedProfessors = query ? results : results.sort(() => 0.5 - Math.random()).slice(0, 5);
-
-      // Map to our Professor interface
-      const professorDetails = selectedProfessors.map((prof: any) => {
+      // Map all professors to our Professor interface
+      const professorDetails = results.map((prof: any) => {
         const node = prof.node;
         return {
           id: node.id || '',
@@ -77,7 +83,8 @@ export default function RatingsScreen() {
         };
       });
 
-      setProfessors(professorDetails);
+      // Store all professors
+      setAllProfessors(professorDetails);
       setLoading(false);
     } catch (err) {
       console.error('Error fetching professors:', err);
@@ -100,6 +107,62 @@ export default function RatingsScreen() {
     if (rating >= 3.0) return colors.warning;
     return colors.error;
   };
+
+  const sortProfessors = (profs: Professor[]) => {
+    const sorted = [...profs].sort((a, b) => {
+      let compareValue = 0;
+
+      switch (sortBy) {
+        case 'rating':
+          compareValue = a.avgRating - b.avgRating;
+          break;
+        case 'wouldTakeAgain':
+          compareValue = a.wouldTakeAgainPercent - b.wouldTakeAgainPercent;
+          break;
+        case 'difficulty':
+          compareValue = a.avgDifficulty - b.avgDifficulty;
+          break;
+      }
+
+      return sortOrder === 'asc' ? compareValue : -compareValue;
+    });
+
+    return sorted;
+  };
+
+  const handleSortSelect = (option: SortOption) => {
+    setSortBy(option);
+    setShowSortDropdown(false);
+  };
+
+  const toggleSortOrder = () => {
+    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+  };
+
+  const getSortLabel = (option: SortOption) => {
+    switch (option) {
+      case 'rating':
+        return 'Rating';
+      case 'wouldTakeAgain':
+        return 'Would Take Again';
+      case 'difficulty':
+        return 'Difficulty';
+    }
+  };
+
+  const loadMore = () => {
+    if (displayCount < sortedProfessors.length && !loadingMore) {
+      setLoadingMore(true);
+      setTimeout(() => {
+        setDisplayCount(prev => prev + 10);
+        setLoadingMore(false);
+      }, 300);
+    }
+  };
+
+  // Sort all professors and slice based on displayCount
+  const sortedProfessors = sortProfessors(allProfessors);
+  const displayedProfessors = sortedProfessors.slice(0, displayCount);
 
   return (
     <ThemedView style={styles.container}>
@@ -130,6 +193,60 @@ export default function RatingsScreen() {
             <ThemedText style={styles.searchButtonText}>Search</ThemedText>
           </TouchableOpacity>
         </View>
+
+        {/* Sort Controls */}
+        <View style={styles.sortContainer}>
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <TouchableOpacity
+              onPress={() => setShowSortDropdown(!showSortDropdown)}
+              style={[styles.sortDropdownButton, { backgroundColor: colors.searchBackground, borderColor: colors.border }]}
+            >
+              <ThemedText style={styles.sortDropdownLabel}>Sort by: {getSortLabel(sortBy)}</ThemedText>
+              <ThemedText style={styles.sortDropdownArrow}>{showSortDropdown ? '▲' : '▼'}</ThemedText>
+            </TouchableOpacity>
+
+            {showSortDropdown && (
+              <View style={[styles.dropdownMenu, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+                <TouchableOpacity
+                  onPress={() => handleSortSelect('rating')}
+                  style={[
+                    styles.dropdownItem,
+                    sortBy === 'rating' && { backgroundColor: colors.searchBackground }
+                  ]}
+                >
+                  <ThemedText style={styles.dropdownItemText}>Rating</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleSortSelect('wouldTakeAgain')}
+                  style={[
+                    styles.dropdownItem,
+                    sortBy === 'wouldTakeAgain' && { backgroundColor: colors.searchBackground }
+                  ]}
+                >
+                  <ThemedText style={styles.dropdownItemText}>Would Take Again</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleSortSelect('difficulty')}
+                  style={[
+                    styles.dropdownItem,
+                    sortBy === 'difficulty' && { backgroundColor: colors.searchBackground }
+                  ]}
+                >
+                  <ThemedText style={styles.dropdownItemText}>Difficulty</ThemedText>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          <TouchableOpacity
+            onPress={toggleSortOrder}
+            style={[styles.sortOrderButton, { backgroundColor: colors.accent }]}
+          >
+            <ThemedText style={styles.sortOrderButtonText}>
+              {sortOrder === 'asc' ? '↑' : '↓'}
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {loading ? (
@@ -145,10 +262,44 @@ export default function RatingsScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {professors.map((prof) => (
+        <FlatList
+          data={displayedProfessors}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={() => {
+            if (loadingMore) {
+              return (
+                <View style={styles.loadingMoreContainer}>
+                  <ActivityIndicator size="small" color={colors.accent} />
+                  <ThemedText style={styles.loadingMoreText}>Loading more...</ThemedText>
+                </View>
+              );
+            }
+            if (displayedProfessors.length < sortedProfessors.length) {
+              return (
+                <View style={styles.loadingMoreContainer}>
+                  <ThemedText style={[styles.loadingMoreText, { opacity: 0.5 }]}>
+                    Scroll down for more
+                  </ThemedText>
+                </View>
+              );
+            }
+            if (displayedProfessors.length > 0) {
+              return (
+                <View style={styles.loadingMoreContainer}>
+                  <ThemedText style={[styles.loadingMoreText, { opacity: 0.5 }]}>
+                    No more professors
+                  </ThemedText>
+                </View>
+              );
+            }
+            return null;
+          }}
+          renderItem={({ item: prof }) => (
             <View
-              key={prof.id}
               style={[
                 styles.professorCard,
                 { backgroundColor: colors.cardBackground, borderColor: colors.border }
@@ -193,8 +344,8 @@ export default function RatingsScreen() {
                 </View>
               </View>
             </View>
-          ))}
-        </ScrollView>
+          )}
+        />
       )}
     </ThemedView>
   );
@@ -254,9 +405,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.3,
   },
-  scrollView: {
-    flex: 1,
+  listContainer: {
     padding: 16,
+  },
+  loadingMoreContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingMoreText: {
+    marginTop: 8,
+    fontSize: 14,
   },
   centerContent: {
     flex: 1,
@@ -350,5 +509,67 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  sortContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  sortDropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  sortDropdownLabel: {
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  sortDropdownArrow: {
+    fontSize: 12,
+    marginLeft: 8,
+    opacity: 0.6,
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    borderRadius: 12,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    zIndex: 1000,
+  },
+  dropdownItem: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  dropdownItemText: {
+    fontSize: 15,
+  },
+  sortOrderButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  sortOrderButtonText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
   },
 });
