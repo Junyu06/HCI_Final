@@ -8,7 +8,7 @@ Hofstra Course Planner streamlines the course selection process by combining cou
 
 ## Features
 
-### 📅 Interactive Calendar View
+### Interactive Calendar View
 - **Visual Weekly Schedule**: Clean, scrollable calendar interface showing courses across all weekdays
 - **Horizontal Scroll**: View 3-4 days at a time with smooth horizontal scrolling
 - **Fixed Time Column**: Time slots remain visible while scrolling through days
@@ -16,7 +16,7 @@ Hofstra Course Planner streamlines the course selection process by combining cou
 - **Color-Coded Courses**: Each course is assigned a unique color for easy visual identification
 - **Real-Time Updates**: Changes reflect instantly across all tabs
 
-### 📚 Course Browser
+### Course Browser
 - **Comprehensive Course Listings**: Browse Computer Science and Engineering courses for Spring 2026
 - **Advanced Search**: Search by course code, title, instructor, or CRN
 - **Smart Filtering**: Filter courses by department (All, CS, Engineering)
@@ -26,7 +26,7 @@ Hofstra Course Planner streamlines the course selection process by combining cou
 - **Detailed Information**: View schedule, instructor, credits, enrollment stats, and waitlist data
 - **Lazy Loading**: Smooth pagination for optimal performance
 
-### ⭐ Professor Ratings
+### Professor Ratings
 - **RateMyProfessor Integration**: Real-time data from RateMyProfessor API
 - **Comprehensive Metrics**:
   - Overall rating (1-5 scale)
@@ -39,7 +39,7 @@ Hofstra Course Planner streamlines the course selection process by combining cou
 - **Multi-Sort Options**: Sort by rating, difficulty, or date
 - **Interactive Cards**: Tap any professor to view their full profile and reviews
 
-### 🎨 User Experience
+### User Experience
 - **Dark Mode Support**: Automatic theme switching based on system preferences
 - **Haptic Feedback**: Tactile feedback on interactions for better user experience
 - **Responsive Design**: Optimized for various screen sizes
@@ -267,4 +267,4 @@ This project is developed as part of an academic assignment at Hofstra Universit
 
 ---
 
-**Built with ❤️ for Hofstra University students**
+**Built for Hofstra University students**
