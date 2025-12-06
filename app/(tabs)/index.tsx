@@ -13,7 +13,7 @@ import {
   View,
   useColorScheme,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Import course data for modal
 import csScheduleJson from '@/class_schedule_spring_2026.json';
@@ -46,6 +46,7 @@ const HomePage = () => {
   const isDark = colorScheme === 'dark';
   const colors = isDark ? Colors.dark : Colors.light;
   const { scheduledCourses, removeCourse } = useSchedule();
+  const insets = useSafeAreaInsets();
 
   // Modal states
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -162,14 +163,12 @@ const HomePage = () => {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView edges={['top']} style={{ backgroundColor: colors.background }}>
-        <View style={styles.header}>
-          <ThemedText style={styles.title}>Hofstra Course Planner</ThemedText>
-          <ThemedText style={[styles.subtitle, { color: colors.lightText }]}>
-            Your personalized schedule assistant
-          </ThemedText>
-        </View>
-      </SafeAreaView>
+      <View style={[styles.header, { paddingTop: insets.top + 5, backgroundColor: colors.background }]}>
+        <ThemedText style={styles.title}>Hofstra Course Planner</ThemedText>
+        <ThemedText style={[styles.subtitle, { color: colors.lightText }]}>
+          Your personalized schedule assistant
+        </ThemedText>
+      </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Main Schedule Card */}
@@ -624,7 +623,7 @@ const FullScheduleView = ({ onClose }: { onClose: () => void }) => {
       {/* Floating Action Button */}
       <TouchableOpacity
         onPress={() => setShowAddModal(true)}
-        style={[styles.fab, styles.fabPrimary, { backgroundColor: colors.accent, bottom: 24, right: 24 }]}
+        style={[styles.scheduleFab, { backgroundColor: colors.accent }]}
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
@@ -638,13 +637,14 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 8,
     paddingBottom: 20,
   },
   title: {
     fontSize: 34,
     fontWeight: 'bold',
     marginBottom: 4,
+    marginTop: 8,
+    lineHeight: 40,
   },
   subtitle: {
     fontSize: 15,
@@ -1016,6 +1016,21 @@ const styles = StyleSheet.create({
   },
   gridWrapper: {
     position: 'relative',
+  },
+  scheduleFab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
 });
 
