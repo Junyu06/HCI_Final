@@ -1,9 +1,9 @@
 import csScheduleJson from '@/class_schedule_spring_2026.json';
-import engScheduleJson from '@/engineering_schedule_spring_2026.json';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useSchedule } from '@/contexts/ScheduleContext';
+import engScheduleJson from '@/engineering_schedule_spring_2026.json';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
   },
@@ -503,6 +503,8 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 4,
+    marginTop: 10,
+    lineHeight: 40
   },
   subtitle: {
     fontSize: 16,
